@@ -19,7 +19,7 @@ bool receiveBytes();
 
 void setup() {
 
-    Serial.begin(57600);
+    Serial.begin(9600);
     
     if (!Prog.init()) {
         Serial.println("Failed to initialize AT89C2051 programmer.");
@@ -31,7 +31,7 @@ void setup() {
 void loop() {
 
     if(receivingData){
-        //Cehck for timeout
+        //Check for timeout
         if (millis() - receiveStartTime > 2000) {
             Serial.println("Error: Data receive timeout.");
             receivingData = false;
