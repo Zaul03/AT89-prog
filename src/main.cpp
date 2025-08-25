@@ -10,6 +10,7 @@ uint8_t bufferIndex = 0;
 uint8_t expectedLen = 0;
 bool receivingData = false;
 bool progMode = false;
+bool allMatch = true;
 unsigned long receiveStartTime = 0;
 
 bool receiveBytes();
@@ -93,7 +94,7 @@ void loop() {
                     Serial.println("Failed to erase chip.");
                     Serial.println();
                 }
-                break; 
+                 
             break;
 
             case 'p': // 'p' for program
@@ -105,19 +106,16 @@ void loop() {
 
             case 'v': // 'v' for verify
                 Serial.println("Verifying chip...");
-                bool allMatch = true;
+                allMatch = true;
                 if(!receiveBytes())
                     break;
                 progMode = false;
             break;
 
             case 'd': // 'd' for data upload
-                if(!receiveBytes())
-                    break;
+                receiveBytes();
                 break;
 
-
-            
             default:
                 Serial.println("Unknown command. Use 'e' to erase, 'p' to program, 'v' to verify., 'd' for data");
                 Serial.println();
