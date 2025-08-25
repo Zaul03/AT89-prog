@@ -1,23 +1,22 @@
 import serial
 import serial.tools.list_ports
 import sys
-from utils import listPorts
+from prog_utils import get_ports
 
 # Initialize variables with default values
 baud = 9600
 path = None
 command = None
 userInput = None
-ports = list(serial.tools.list_ports.comports())
 selected_port = None
-connection = False
+
 
 
 
 # Iterate over arguments with their indices
 for idx, arg in enumerate(sys.argv):
   match arg:
-    case 'help':
+    case '-h':
       print('Available commands/args: ')
       print('-p: program the device. Must be followed by the path to the file. ex: prog-tool.py -p "path"')
       print('-v: verifiy the device. Must be followed by the path to the file. ex: prog-tool.py -v "path"')
@@ -40,18 +39,31 @@ for idx, arg in enumerate(sys.argv):
     case _:
       path = sys.argv[idx]
 
+
+
 # Ask user to select a port
 while True:
+  ports = get_ports()
+  
+  if not ports:
+    print('No available serial ports')
+    selection = input('If you wish to refresh press \'r\' \n If you wish to exit press \'x\'')
+  else:
+    for i, port in enumerate(ports):
+      print(f"{i}: {port.device} - {port.description}")
+    selection = input('If you wish to refresh press \'r\' \n If you wish to exit press \'x\' \n If you wish to select a port enter the port number:')
+  
+  if selection == 'x':
+    sys.exit('Program has closed')
+  elif selection == 'r':
+    continue
+  else:
     try:
-        listPorts(ports)
-        selection = int(input("Select a port by number, press 'r' to refresh: "))
-        if 0 <= selection < len(ports):
-            selected_port = ports[selection].device
-            break
-        else:
-            print("Invalid selection. Try again.")
+      selection = int(selection)
     except ValueError:
-      print("Please enter a valid number.")
+      selection = int(input("Please enter a valid number."))
+
+    
       
 
 print(f"Selected port: {selected_port}")
@@ -81,6 +93,6 @@ while True:
 
 
 
-  
+ser.close()
 print('Program is stopping...')
 

@@ -80,8 +80,8 @@ void loop() {
     }
 
     if(Serial.available()) {
+
         char c = Serial.read();
-        
         switch(c) {
 
 
@@ -121,8 +121,7 @@ void loop() {
                 Serial.println();
                 break;
         }
-            
-        
+    
     }
     
 
