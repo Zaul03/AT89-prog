@@ -120,7 +120,7 @@ def build_packet(cmd: str, data: bytes = b"") -> bytes:
 def TX(ser, cmd: str, data =b"")->None:
   packet = build_packet(cmd, data)
   while True:
-      ser.reset_input_buffer()
+      #ser.reset_input_buffer()
       ser.write(packet)
       ser.flush()
       return 
