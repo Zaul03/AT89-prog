@@ -1,13 +1,19 @@
 import serial
 import serial.tools.list_ports
+from serial import Serial
 import argparse
 import sys
-import time
-from typing import Optional, List
+from io import BytesIO
+
+from typing import Optional
 
 # Defaults
-DEFAULT_BAUD = 57600
+DEFAULT_BAUD = 9600
 DEFAULT_TIMEOUT = 2.0
+FRAME_SIZE = 128
+DATA_CAP = 125
+
+# ----------- ARG PARSING -----------------
 
 def arg_parse() -> argparse.ArgumentParser:
   p = argparse.ArgumentParser(
@@ -34,6 +40,8 @@ def arg_parse() -> argparse.ArgumentParser:
   sp_ver.add_argument("hexfile", help="Input Intel HEX file")
 
   return p
+
+# ----------- SERIAL PORT -----------------
 
 def get_ports():
   ports = list(serial.tools.list_ports.comports())
@@ -67,8 +75,6 @@ def pick_port_interactive():
         print("Number out of range!")
         continue
 
-
-
 def resolve_port(cli_port: Optional[str])-> Optional[str]:
   if cli_port:
     return cli_port
@@ -83,3 +89,49 @@ def open_serial(port, baud, time_out):
     sys.exit(2)
   print('Port opened succesfully')
   return ser
+
+# ---------- RX and TX ------------------
+def _checksum(cmd: int, data: bytes , length: int) -> int:
+  """8-bit sum: CMD + LEN + first `length` bytes of DATA (mod 256)."""
+  s = 0
+  for i in data:
+    s += i
+  s += cmd + length
+  return s & 0xFF
+
+def build_packet(cmd: str, data: bytes = b"") -> bytes:
+  """[0]=CMD, [1]=LEN, [2..126]=DATA, [127]=CHECKSUM."""
+
+  if not isinstance(cmd, (bytes, bytearray)) and len(cmd) != 1:
+      raise ValueError("cmd must be one ASCII char: 'e','v','p','d'")
+  
+  cmd_byte = cmd[0] if isinstance(cmd, (bytes, bytearray)) else ord(cmd)
+
+  length = len(data)
+  frame = bytearray(FRAME_SIZE)
+  frame[0] = cmd_byte
+  frame[1] = length
+  if length:
+      frame[2:2+length] = data
+  frame[-1] = _checksum(cmd_byte, data, length)
+  return bytes(frame)
+  
+
+def TX(ser, cmd: str, data =b"")->None:
+  packet = build_packet(cmd, data)
+  while True:
+      ser.reset_input_buffer()
+      ser.write(packet)
+      ser.flush()
+      return 
+
+
+def RX_reply(ser: Serial ,as_text: bool = True) -> Optional[str | bytes]:
+
+  line = ser.readline()  
+  if line:
+      return line.decode(errors="replace").rstrip("\r\n") if as_text else bytes(line)
+  buf = ser.read(ser.in_waiting or 1) 
+  if not buf:
+      return None
+  return buf.decode(errors="replace") if as_text else buf

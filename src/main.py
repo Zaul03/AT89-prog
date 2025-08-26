@@ -1,17 +1,13 @@
 from __future__ import annotations
-import argparse
 import sys
-import os
 from typing import Optional, List
 
-
-import serial
-from serial import Serial, SerialException
 
 #Helper
 from prog_utils import arg_parse
 from prog_utils import resolve_port
 from prog_utils import open_serial
+from prog_utils import RX_reply
 
 
 #Vars
@@ -26,17 +22,16 @@ def main(argv: Optional[List[str]] = None):
 
   ser = open_serial(port, args.baud, args.timeout)
 
-  try:
-      while True:
-        s = ser.read(1)
-        print(s)
-  except KeyboardInterrupt:
-    sys.exit()
+  while True:
+    print(RX_reply(ser, True))
+  
+
     
 
 
 if __name__== "__main__":
-  sys.exit(main())     
+  sys.exit(main())   
+    
 
 
 

@@ -42,6 +42,8 @@ void loop() {
         // Read incoming data
         while (Serial.available() && bufferIndex < expectedLen) {
             serialBuffer[bufferIndex++] = Serial.read();}
+        
+        Serial.println('k');
 
         // If we've received the expected length, process the data
         if (bufferIndex >= expectedLen) {
@@ -52,7 +54,6 @@ void loop() {
             if (checksum != serialBuffer[expectedLen - 1]) {
                 Serial.println("Error: Checksum mismatch.");} 
             else if(progMode) {
-                Serial.println("Programming chip...");
                 for (uint8_t i = 0; i < expectedLen - 1; i++) {
                     if (!Prog.progChip(serialBuffer[i])) {
                         Serial.print("Programming failed at byte ");
@@ -61,7 +62,6 @@ void loop() {
                 }
                 Serial.println("Programming completed.");
             } else {
-                Serial.println("Verifying chip...");
                 bool allMatch = true;
                 for (uint8_t i = 0; i < expectedLen - 1; i++) {
                     if (!Prog.verifyChip(serialBuffer[i])) {
@@ -88,24 +88,19 @@ void loop() {
             case 'e': //erase
                 Serial.println("Erasing chip...");
                 if (Prog.eraseChip()) {
-                    Serial.println("Chip erased successfully.");
+                    Serial.println("ok");
                     Serial.println();
-                } else {
-                    Serial.println("Failed to erase chip.");
-                    Serial.println();
-                }
+                } 
                  
             break;
 
             case 'p': // 'p' for program
-                Serial.println("Programming chip...");
                 if(!receiveBytes())
                     break;
                 progMode = true;
             break;
 
             case 'v': // 'v' for verify
-                Serial.println("Verifying chip...");
                 allMatch = true;
                 if(!receiveBytes())
                     break;
