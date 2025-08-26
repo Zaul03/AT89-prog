@@ -135,3 +135,13 @@ def RX_reply(ser: Serial ,as_text: bool = True) -> Optional[str | bytes]:
   if not buf:
       return None
   return buf.decode(errors="replace") if as_text else buf
+
+def TX_RX (ser: Serial, cmd: str, data: bytes = b"", expect_ok_prefix: Optional[str] = None) -> Optional[str]:
+  while True:
+      TX(ser, cmd, data)
+      reply = RX_reply(ser, as_text=True)
+      
+      if reply is None:
+        return None
+      else:
+        return str(reply)

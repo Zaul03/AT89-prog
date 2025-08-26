@@ -10,10 +10,6 @@ from prog_utils import open_serial
 from prog_utils import RX_reply
 
 
-#Vars
-path = None
-
-
 def main(argv: Optional[List[str]] = None):
   args = arg_parse().parse_args(argv)
 
