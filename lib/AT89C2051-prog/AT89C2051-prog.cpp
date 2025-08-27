@@ -32,7 +32,7 @@ bool AT89C2051Prog::progChip(uint8_t data) {
     writePortData(PORT_ID_D, PORTD_DIR_MASK, data << 4);
     writePortData(PORT_ID_B, PORTB_DIR_MASK, data >> 4); 
 
-    delayMicroseconds(1200); // Wait for the data to be set
+    delayMicroseconds(10); // Wait for the data to be set
 
     pulsePin(PORT_ID_C, A0_MASK); 
     delayMicroseconds(120); 
@@ -50,17 +50,13 @@ bool AT89C2051Prog::progChip(uint8_t data) {
 bool AT89C2051Prog::verifyChip(uint8_t data) {
     setVerifyMode();
     delayMicroseconds(100);
-    setDataPinsInput(); 
     uint8_t readData =  readPortData(PORT_ID_D); // Read data from P1.0-P1.7
     readData = ((readData & 0xF0)>>4)  | (readPortData(PORT_ID_B) << 4); // Combine with P1.4-P1.7
     
     pulsePin(PORT_ID_C, A5_MASK);
+    delayMicroseconds(120); 
     pulsePin(PORT_ID_C, A5_MASK);  //next byte in ROM
     
-    setDataPinsOutput();
-    Serial.println("Read Data: ");
-    Serial.println(readData, HEX);
-
     if (readData != data) 
         return false; 
     else

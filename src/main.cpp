@@ -2,6 +2,7 @@
 #include "../lib/AT89C2051-prog/AT89C2051-prog.h"
 
 #define SERIAL_BUFFER_SIZE 128
+#define ACK 0x06
 
 AT89C2051Prog Prog;
 
@@ -12,6 +13,7 @@ bool receivingData = false;
 bool progMode = false;
 bool allMatch = true;
 unsigned long receiveStartTime = 0;
+const char* data = ":050000007590AA80FECE:00000001FF";
 
 bool receiveBytes();
 
@@ -43,34 +45,36 @@ void loop() {
         while (Serial.available() && bufferIndex < expectedLen) {
             serialBuffer[bufferIndex++] = Serial.read();}
         
-        Serial.println('k');
 
         // If we've received the expected length, process the data
         if (bufferIndex >= expectedLen) {
-            //calculate checksum
+
+            Serial.println(ACK);
+
             uint8_t checksum = 0;
             for (uint8_t i = 0; i < expectedLen - 1; i++) checksum += serialBuffer[i];
 
             if (checksum != serialBuffer[expectedLen - 1]) {
                 Serial.println("Error: Checksum mismatch.");} 
-            else if(progMode) {
-                for (uint8_t i = 0; i < expectedLen - 1; i++) {
-                    if (!Prog.progChip(serialBuffer[i])) {
-                        Serial.print("Programming failed at byte ");
-                        Serial.println(i);
-                        break;}
-                }
-                Serial.println("Programming completed.");
-            } else {
-                bool allMatch = true;
+            else 
+                Serial.println("Checksum OK");
+
+
+            if(progMode) {
+                for (uint8_t i = 0; i < expectedLen - 1; i++) 
+                    if (!Prog.progChip(serialBuffer[i])){
+                        Serial.println("Program OK"); 
+                        break;} }
+            else {
+                allMatch = true;
                 for (uint8_t i = 0; i < expectedLen - 1; i++) {
                     if (!Prog.verifyChip(serialBuffer[i])) {
-                        Serial.print("Verification failed at byte ");
-                        Serial.println(i);
+                        Serial.println("Verification failed");
                         allMatch = false;
                         break;}
                 }
-                if (allMatch) Serial.println("Verification successful. All bytes match.");
+                if (allMatch) 
+                    Serial.println("Verification OK");
             }
             receivingData = false;
             bufferIndex = 0;
@@ -83,20 +87,15 @@ void loop() {
 
         char c = Serial.read();
         switch(c) {
-
-
             case 'e': //erase
-                Serial.println("Erasing chip...");
-                if (Prog.eraseChip()) {
-                    Serial.println("ok");
-                    Serial.println();
-                } 
-                 
+                receivingData = false;
+                if (Prog.eraseChip()) 
+                    Serial.println(ACK);
             break;
 
             case 'p': // 'p' for program
                 if(!receiveBytes())
-                    break;
+                  break;
                 progMode = true;
             break;
 
@@ -123,19 +122,16 @@ void loop() {
 }
 
 bool receiveBytes() {
-    Serial.println("Send data length (max 128):");
+
     while (!Serial.available());
     expectedLen = Serial.read();
-    if (expectedLen < 2 || expectedLen > SERIAL_BUFFER_SIZE) {
-    Serial.println("Error: Invalid data length.");
-    return false;
-    }
+
+    if (expectedLen < 2 || expectedLen > SERIAL_BUFFER_SIZE) 
+        return false;
+    
     bufferIndex = 0;
     receivingData = true;
-    receiveStartTime = millis();
-    Serial.print("Send ");
-    Serial.print(expectedLen - 1);
-    Serial.println(" data bytes plus 1 checksum byte...");    
+    receiveStartTime = millis();   
     
     return true;
 }
