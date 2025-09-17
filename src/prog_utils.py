@@ -11,18 +11,14 @@ from typing import Optional
 # Defaults
 DEFAULT_BAUD = 9600
 DEFAULT_TIMEOUT = 2.0
-FRAME_SIZE = 128
-DATA_CAP = 125
+FRAME_SIZE = 64
+DATA_CAP = FRAME_SIZE - 3
 
 CMD_MAP = {
-    "erase" :  ord("e"),
-    "e": ord("e"),
-    "program": ord("p"),
-    "p": ord("p"),
-    "verify": ord("v"),
-    "v":ord("v"),
-    "data":  ord("d"),
-    "d":ord("d")
+    "erase" :  ord("e"), "e": ord("e"),
+    "program": ord("p"), "p": ord("p"),
+    "verify": ord("v"), "v":ord("v"),
+    "data":  ord("d"), "d":ord("d")
 }
 
 # ----------- ARG PARSING -----------------
@@ -109,7 +105,7 @@ def _checksum(cmd: int, data: bytes , length: int) -> int:
   for i in data:
     s += i
   s += cmd + length
-  return s
+  return s & 0xFF
 
 def build_packet(cmd: str, data: bytes = b"") -> bytes:
     cmd = cmd.lower().strip()
@@ -132,7 +128,7 @@ def build_packet(cmd: str, data: bytes = b"") -> bytes:
     frame[1] = length
     if length:
         frame[2:2+length] = data
-    frame[-1] = _checksum(cmd_byte, data, length)
+    frame[FRAME_SIZE - 1] = _checksum(cmd_byte, data, length)
     return bytes(frame)
   
 def TX(ser, cmd: str, data =b"")->None:
@@ -178,15 +174,6 @@ def _ack_resp(resp) -> bool:
         return True
     return s
 
-def send_packet(ser, cmd: str, data):
-  try:
-    resp = TX_RX(ser, cmd, data)
-    if not _ack_resp(resp):
-      raise RuntimeError(f"NACK or unexpected response: {repr(resp)}")
-  except Exception as e:
-    time.sleep(0.05)
-  return resp
-
 def send_file_cmd(
     ser,
     cmd: str,
@@ -216,11 +203,10 @@ def send_file_cmd(
 
     # optional: erase first
     if erase_first:
-      resp = TX_RX(ser, "erase", data=b"")
-      #time.sleep(0.015)
-      if not _ack_resp(resp):
-          raise RuntimeError(f"ERASE failed: {repr(resp)}")
-      print(RX_reply(ser,True))
+      r = TX_RX(ser, 'erase', b"")
+      if not _ack_resp(r):
+          raise RuntimeError(f"ERASE failed: {repr(r)}")
+      print(r)
 
     sent = 0
     chunk_idx = 0
@@ -229,20 +215,31 @@ def send_file_cmd(
     with open(path, "rb") as f:
         # first packet sets the mode
         chunk = f.read(DATA_CAP)
+        if not chunk:
+          return
+        if pad_last and len(chunk) < DATA_CAP:
+            chunk = chunk + bytes([pad_byte]) * (DATA_CAP - len(chunk))
 
-        r = send_packet(ser, cmd, chunk)
+
+        while  not _ack_resp(r):
+          r = RX_reply(ser, True)
+          print(r)
+        print('Erase complete')
+
+        print('Programming...')
+        r = TX_RX(ser, cmd, chunk)
+        if not _ack_resp(r):
+          raise RuntimeError(f"NACK or unexpected response: {repr(r)}")
         print(r) # ussualy just ACK
-        
 
-        r = RX_reply(ser,True) # checksum
-        print(r)
+        while  not _ack_resp(r):
+          r = RX_reply(ser, True)
+          print(r)
 
-        if r != "Checksum OK":
-          time.sleep(0.1)
-          r = send_packet(ser, cmd, chunk)
+        while _ack_resp(r) != "Program OK":
+          r = RX_reply(ser, True)
+          print(r)
 
-          
-        
         r = RX_reply(ser,True) # verify / prog
         print(r)
 

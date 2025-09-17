@@ -24,11 +24,9 @@ A5 - XTAL1
 #define PORTB_DIR_MASK 0x0F // Digital pins D8 to D11 direction
 #define PORTC_DIR_MASK 0x3F // A0 to A5 data pins
 
- 
-
 // PORT D masks -----------------
-#define D2_MASK 0x04 // D2 for P1.4 (active low)
-#define D3_MASK 0x08 // D3 for P1.5 (active high)
+#define D2_MASK 0x04 
+#define D3_MASK 0x08 
 #define D4_MASK 0x10 // D4 for P1.0 (active high)
 #define D5_MASK 0x20 // D5 for P1.1 (active high)
 #define D6_MASK 0x40 // D6 for P1.2 (active high)
@@ -51,16 +49,26 @@ A5 - XTAL1
 //------------------------------
 
 
+
 // Port identifiers
 // These identifiers are used to specify which port to operate on
 // when calling functions like writePortData, readPortData, etc.
-//If you use the ports directly you can have issues in logic statements
+// If you use the ports directly you can have issues in logic statements
 // Use the PortId enum to specify the port you want to operate on.
-enum PortId {
+
+enum Port {
     PORT_ID_D,
     PORT_ID_B,
     PORT_ID_C
 };
+
+enum portDir{
+    IN,
+    OUT
+};
+ 
+
+
 
 struct AT89C2051Prog{
    
@@ -68,24 +76,23 @@ struct AT89C2051Prog{
 
     bool eraseChip(); 
 
-    bool progChip(uint8_t data); 
+    bool progChip(uint8_t data, bool verify); 
     
     bool verifyChip(uint8_t data); 
 
-    void RST(); // Move cursor to top of ROM
+    void RST(); 
 
 
     //utility functions
-    private:
-    void setDataPinsOutput(); // Set P1.0-P1.7 as output, quickly sets D4-D11 as output
-    void setDataPinsInput(); // Set P1.0-P1.7 as input, quickly sets D4-D11 as input
+    void setDataPortOutput(); // QUICKLY SET D4-D11 AS OUTPUT
+    void setDataPortInput(); // QUICKLY SET D4-D11 AS OUTPUT
 
-    void setPortDirection(PortId port, uint8_t mask, bool output); 
-    void writePortData(PortId port, uint8_t mask, uint8_t data); 
+    void setPortDirection(Port port, uint8_t mask, portDir direction); 
+    void writePortData(Port port, uint8_t mask, uint8_t data); 
 
-    uint8_t readPortData(PortId port);
+    uint8_t readPortData(Port port);
 
-    void pulsePin(PortId port, uint8_t mask);
+    void pulsePin(Port port, uint8_t mask);
     
     void setRSTHigh(); 
     void setRSTLow(); 

@@ -10,7 +10,6 @@ from prog_utils import resolve_port
 from prog_utils import open_serial
 from prog_utils import RX_reply
 from prog_utils import TX_RX
-from prog_utils import _ack_resp
 from prog_utils import send_file_cmd
 
 
@@ -34,11 +33,15 @@ def main(argv: Optional[List[str]] = None):
       if r == "AT89C2051 programmer initialized successfully.":
         match cmd:
            case 'program':
-              print('p')
+              send_file_cmd(ser, cmd, file, True, True, 0xFF, 0.4)
+              break
            case 'verify':
-              print('v')
+              send_file_cmd(ser, cmd, file, False, True, 0xFF, 0.4)
+              break
            case 'erase':
-              print('e')
+              if TX_RX(ser, cmd, None) == 0x06:
+                 print("Chip erased")
+                 break
   except KeyboardInterrupt:
     print("\nInterrupted by user.")
   finally:

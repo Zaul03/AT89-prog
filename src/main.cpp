@@ -1,137 +1,144 @@
 #include <Arduino.h>
 #include "../lib/AT89C2051-prog/AT89C2051-prog.h"
 
-#define SERIAL_BUFFER_SIZE 128
 #define ACK 0x06
+#define SERIAL_BUFFER_SIZE 64
 
+#define CMD serialBuffer[0]
+#define LENGTH_RX serialBuffer[1]
+#define CHECKSUM_RX serialBuffer[LENGTH_RX - 1]
+#define DATA_START_INDEX 2
+
+uint8_t serialBuffer[SERIAL_BUFFER_SIZE]; // [cmd, length, data..., checksum]
+uint8_t bufferIndex = 0;
+uint8_t checksum = 0;
+
+
+enum State {IDLE, RECEIVING_DATA, ERASE, PROGRAM, VERIFY};
+State state = IDLE;
 AT89C2051Prog Prog;
 
-uint8_t serialBuffer[SERIAL_BUFFER_SIZE];
-uint8_t bufferIndex = 0;
-uint8_t expectedLen = 0;
-bool receivingData = false;
-bool progMode = false;
-bool allMatch = true;
 unsigned long receiveStartTime = 0;
-const char* data = ":050000007590AA80FECE:00000001FF";
-
-bool receiveBytes();
-
 
 
 void setup() {
-
     Serial.begin(9600);
     
-    if (!Prog.init()) {
-        Serial.println("Failed to initialize AT89C2051 programmer.");
+    if (!Prog.init())
         return;
-    } else 
-        Serial.println("AT89C2051 programmer initialized successfully.");
 }
 
 void loop() {
 
-    if(receivingData){
-        //Check for timeout
-        if (millis() - receiveStartTime > 2000) {
-            Serial.println("Error: Data receive timeout.");
-            receivingData = false;
-            bufferIndex = 0;
-            return;}
+    switch (state){
+        case IDLE:
+            while (!Serial.available());
 
+            state = RECEIVING_DATA;
+            receiveStartTime = millis();
+            checksum = 0;
+            bufferIndex = 0; 
 
-        // Read incoming data
-        while (Serial.available() && bufferIndex < expectedLen) {
-            serialBuffer[bufferIndex++] = Serial.read();}
-        
+            break;
+        case RECEIVING_DATA:
+            // Timeout
+            if (millis() - receiveStartTime > 2000) {
+                Serial.println("Error: Data receive timeout.");
+                state = IDLE;
+                bufferIndex = 0;
+                return;}
+            
+            // Read command and length
+            while (!Serial.available());
+            CMD = Serial.read(); //cmd
+            checksum += CMD;
+            bufferIndex++;
+            
+            while (!Serial.available());
+            LENGTH_RX = Serial.read(); //length
+            checksum += LENGTH_RX;
+            bufferIndex++;
+            
 
-        // If we've received the expected length, process the data
-        if (bufferIndex >= expectedLen) {
-
-            Serial.println(ACK);
-
-            uint8_t checksum = 0;
-            for (uint8_t i = 0; i < expectedLen - 1; i++) checksum += serialBuffer[i];
-
-            if (checksum != serialBuffer[expectedLen - 1]) {
-                Serial.println("Error: Checksum mismatch.");} 
-            else 
-                Serial.println("Checksum OK");
-
-
-            if(progMode) {
-                for (uint8_t i = 0; i < expectedLen - 1; i++) 
-                    if (!Prog.progChip(serialBuffer[i])){
-                        Serial.println("Program OK"); 
-                        break;} }
-            else {
-                allMatch = true;
-                for (uint8_t i = 0; i < expectedLen - 1; i++) {
-                    if (!Prog.verifyChip(serialBuffer[i])) {
-                        Serial.println("Verification failed");
-                        allMatch = false;
-                        break;}
-                }
-                if (allMatch) 
-                    Serial.println("Verification OK");
+            //Validate packet length
+            if (LENGTH_RX < 2 || LENGTH_RX > SERIAL_BUFFER_SIZE) {
+                Serial.println("Error: Invalid packet length.");
+                state = IDLE;
+                bufferIndex = 0;
+                return;
             }
-            receivingData = false;
+            
+            
+            // Read remaining data into the buffer
+            while (Serial.available() && bufferIndex < SERIAL_BUFFER_SIZE) {
+                serialBuffer[bufferIndex++] = Serial.read();
+            }
+            
+
+            //Calculate checksum
+            for (uint8_t i = 2; i < LENGTH_RX; i++) {
+                checksum += serialBuffer[i];}
+            
+            // Validate checksum
+            if(checksum != CHECKSUM_RX) {
+                Serial.println("Error: Checksum mismatch.");
+                state = IDLE;
+                bufferIndex = 0;
+                return;
+            }
+
+            // Acknowledge receipt and validation
+            Serial.write(ACK); 
             bufferIndex = 0;
-        }
-        return;
+            checksum = 0;
 
-    }
-
-    if(Serial.available()) {
-
-        char c = Serial.read();
-        switch(c) {
-            case 'e': //erase
-                receivingData = false;
-                if (Prog.eraseChip()) 
-                    Serial.println(ACK);
-            break;
-
-            case 'p': // 'p' for program
-                if(!receiveBytes())
-                  break;
-                progMode = true;
-            break;
-
-            case 'v': // 'v' for verify
-                allMatch = true;
-                if(!receiveBytes())
+            // Process command
+            switch (CMD){
+                case 'p':
+                        state = PROGRAM;
                     break;
-                progMode = false;
+                case 'e':
+                        state = ERASE;
+                    break;
+                case 'v':
+                        state = VERIFY;
+                    break;
+                default:
+                        state = IDLE;
+                    break;
+            }
+            
             break;
-
-            case 'd': // 'd' for data upload
-                receiveBytes();
-                break;
-
-            default:
-                Serial.println("Unknown command. Use 'e' to erase, 'p' to program, 'v' to verify., 'd' for data");
-                Serial.println();
-                break;
-        }
-    
+        case ERASE:
+            if (Prog.eraseChip())
+                Serial.write(ACK); 
+            else
+                Serial.println("Error: Chip erase failed."); 
+            break;
+        case PROGRAM:
+            for(uint8_t i = DATA_START_INDEX; i < LENGTH_RX - 1; i++) {
+                if (!Prog.progChip(serialBuffer[i], false)) {
+                    Serial.println("Error: Programming failed at byte index " + String(i-2));
+                    state = IDLE;
+                    return;
+                }
+                else 
+                    Serial.write(ACK); 
+            }
+            break;
+        case VERIFY:
+        for(uint8_t i = DATA_START_INDEX; i < LENGTH_RX - 1; i++) {
+                if (!Prog.verifyChip(serialBuffer[i])) {
+                    Serial.println("Error: Verify failed at byte index " + String(i-2));
+                    state = IDLE;
+                    return;
+                }
+                else 
+                    Serial.write(ACK); 
+            }
+            break;
+        default:
+            state = IDLE;
+            break;
     }
-    
-
-}
-
-bool receiveBytes() {
-
-    while (!Serial.available());
-    expectedLen = Serial.read();
-
-    if (expectedLen < 2 || expectedLen > SERIAL_BUFFER_SIZE) 
-        return false;
-    
-    bufferIndex = 0;
-    receivingData = true;
-    receiveStartTime = millis();   
-    
-    return true;
 }

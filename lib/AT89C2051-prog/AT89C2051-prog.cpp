@@ -3,9 +3,9 @@
 
 bool AT89C2051Prog::init() {
 
-    setDataPinsOutput();
-    setPortDirection(PORT_ID_D, RST_VPP_DIR_MASK, true);
-    setPortDirection(PORT_ID_C, PORTC_DIR_MASK, true); 
+    setDataPortOutput();
+    setPortDirection(PORT_ID_D, RST_VPP_DIR_MASK, OUT);
+    setPortDirection(PORT_ID_C, PORTC_DIR_MASK, OUT); 
     writePortData(PORT_ID_C, PORTC_DIR_MASK, PORTC_DIR_MASK); 
     writePortData(PORT_ID_D, PORTD_DIR_MASK, 0xF0);
     writePortData(PORT_ID_B, PORTB_DIR_MASK, 0x0F);
@@ -17,7 +17,6 @@ bool AT89C2051Prog::init() {
 bool AT89C2051Prog::eraseChip() {
     setEraseMode();
     setRST12V(); 
-    //delay(1);
     pulsePin(PORT_ID_C, A0_MASK);
     delay(15); // Wait for the erase operation to complete
     pulsePin(PORT_ID_C, A0_MASK); 
@@ -25,7 +24,7 @@ bool AT89C2051Prog::eraseChip() {
     return true; 
 }
 
-bool AT89C2051Prog::progChip(uint8_t data) {
+bool AT89C2051Prog::progChip(uint8_t data, bool verify) {
 
     setProgMode();
 
@@ -56,6 +55,8 @@ bool AT89C2051Prog::verifyChip(uint8_t data) {
     pulsePin(PORT_ID_C, A5_MASK);
     delayMicroseconds(120); 
     pulsePin(PORT_ID_C, A5_MASK);  //next byte in ROM
+
+    Serial.println(data,HEX);
     
     if (readData != data) 
         return false; 
@@ -64,27 +65,28 @@ bool AT89C2051Prog::verifyChip(uint8_t data) {
 }
 
 void AT89C2051Prog::RST() {
-    setRSTLow(); // Set RST low
-    delay(1000); // Wait for a short time
-    setRSTHigh(); // Set RST high
-    delayMicroseconds(500); // Wait for a short time
+    setRSTLow();
+    delayMicroseconds(500); 
+    setRSTHigh();
+    delayMicroseconds(500); 
 }
+
 //-------------------Utility functions---------------------
 
-void AT89C2051Prog::setDataPinsOutput(){
+void AT89C2051Prog::setDataPortOutput(){
     // Set P1.0-P1.7 as output
-    setPortDirection(PORT_ID_D, PORTD_DIR_MASK, true); // Set D4-D7 as output
-    setPortDirection(PORT_ID_B, PORTB_DIR_MASK, true); // Set D8-D11 as output
+    setPortDirection(PORT_ID_D, PORTD_DIR_MASK, OUT); // Set D4-D7 as output
+    setPortDirection(PORT_ID_B, PORTB_DIR_MASK, OUT); // Set D8-D11 as output
 }
 
-void AT89C2051Prog::setDataPinsInput(){
+void AT89C2051Prog::setDataPortInput(){
     // Set P1.0-P1.7 as input
-    setPortDirection(PORT_ID_D, PORTD_DIR_MASK, false);
-    setPortDirection(PORT_ID_B, PORTB_DIR_MASK, false);
+    setPortDirection(PORT_ID_D, PORTD_DIR_MASK, IN);
+    setPortDirection(PORT_ID_B, PORTB_DIR_MASK, IN);
 }
 
-void AT89C2051Prog::setPortDirection(PortId port, uint8_t mask, bool output) {
-    if(output) {
+void AT89C2051Prog::setPortDirection(Port port, uint8_t mask, portDir dir) {
+    if(dir == IN) {
         if(port == PORT_ID_D) {DDRD |= mask;}
         else if(port == PORT_ID_B) {DDRB |= mask;} 
         else if(port == PORT_ID_C) {DDRC |= mask;}} 
@@ -94,7 +96,7 @@ void AT89C2051Prog::setPortDirection(PortId port, uint8_t mask, bool output) {
         else if(port == PORT_ID_C) {DDRC &= ~mask;}}
 }
 
-void AT89C2051Prog::writePortData(PortId port, uint8_t mask, uint8_t data) {
+void AT89C2051Prog::writePortData(Port port, uint8_t mask, uint8_t data) {
     if (port == PORT_ID_D){
         PORTD = (PORTD & ~mask) | (data & mask);}
     else if (port == PORT_ID_B){
@@ -105,7 +107,7 @@ void AT89C2051Prog::writePortData(PortId port, uint8_t mask, uint8_t data) {
         Serial.println("Invalid port specified for writePortData.");}
 }
 
-uint8_t AT89C2051Prog::readPortData(PortId port) {
+uint8_t AT89C2051Prog::readPortData(Port port) {
     if (port == PORT_ID_D) {
         return PIND;} 
     else if (port == PORT_ID_B) {
@@ -116,14 +118,10 @@ uint8_t AT89C2051Prog::readPortData(PortId port) {
         return 0; // Invalid port
 }
 
-void AT89C2051Prog::pulsePin(PortId port, uint8_t mask) {
+void AT89C2051Prog::pulsePin(Port port, uint8_t mask) {
 
     uint8_t data  = readPortData(port); // Ensure the port is read before pulsing
-
-    if(data & mask) 
-        writePortData(port, mask, 0); // Set pin low
-    else 
-        writePortData(port, mask, mask); // Set pin high
+    writePortData(port, mask, ~data);
  
 }
 
