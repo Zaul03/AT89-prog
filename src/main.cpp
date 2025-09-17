@@ -76,7 +76,7 @@ void loop() {
             
 
             //Calculate checksum
-            for (uint8_t i = 2; i < LENGTH_RX; i++) {
+            for (uint8_t i = DATA_START_INDEX; i < LENGTH_RX - 1; i++) {
                 checksum += serialBuffer[i];}
             
             // Validate checksum
