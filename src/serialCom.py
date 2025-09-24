@@ -183,7 +183,7 @@ def send_file_cmd(
             # chunk 2 to N
             while True:
                 try:
-                    r = send_packet(ser, "data", chunk)
+                    r = TX_RX(ser, "data", chunk)
                     print(r) # ussualy just ACK
                     
                     r = RX_reply(ser,True) # checksum
