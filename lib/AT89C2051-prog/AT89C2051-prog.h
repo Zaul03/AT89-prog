@@ -62,13 +62,11 @@ enum Port {
     PORT_ID_C
 };
 
-enum portDir{
+enum PortDir{
     IN,
     OUT
 };
  
-
-
 
 struct AT89C2051Prog{
    
@@ -80,16 +78,15 @@ struct AT89C2051Prog{
     
     bool verifyChip(uint8_t data); 
 
-    void RST(); 
+    void rst(); 
 
 
     //utility functions
     void setDataPortOutput(); // QUICKLY SET D4-D11 AS OUTPUT
     void setDataPortInput(); // QUICKLY SET D4-D11 AS OUTPUT
 
-    void setPortDirection(Port port, uint8_t mask, portDir direction); 
+    void setPortDirection(Port port, uint8_t mask, PortDir direction); 
     void writePortData(Port port, uint8_t mask, uint8_t data); 
-
     uint8_t readPortData(Port port);
 
     void pulsePin(Port port, uint8_t mask);

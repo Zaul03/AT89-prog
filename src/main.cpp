@@ -127,7 +127,7 @@ void loop() {
             }
             break;
         case VERIFY:
-        for(uint8_t i = DATA_START_INDEX; i < LENGTH_RX - 1; i++) {
+            for(uint8_t i = DATA_START_INDEX; i < LENGTH_RX - 1; i++) {
                 if (!Prog.verifyChip(serialBuffer[i])) {
                     Serial.println("Error: Verify failed at byte index " + String(i-2));
                     state = IDLE;

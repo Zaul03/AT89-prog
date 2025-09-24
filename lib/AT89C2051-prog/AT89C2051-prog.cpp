@@ -64,7 +64,7 @@ bool AT89C2051Prog::verifyChip(uint8_t data) {
         return true; 
 }
 
-void AT89C2051Prog::RST() {
+void AT89C2051Prog::rst() {
     setRSTLow();
     delayMicroseconds(500); 
     setRSTHigh();
@@ -85,7 +85,7 @@ void AT89C2051Prog::setDataPortInput(){
     setPortDirection(PORT_ID_B, PORTB_DIR_MASK, IN);
 }
 
-void AT89C2051Prog::setPortDirection(Port port, uint8_t mask, portDir dir) {
+void AT89C2051Prog::setPortDirection(Port port, uint8_t mask, PortDir dir) {
     if(dir == IN) {
         if(port == PORT_ID_D) {DDRD |= mask;}
         else if(port == PORT_ID_B) {DDRB |= mask;} 
@@ -122,6 +122,7 @@ void AT89C2051Prog::pulsePin(Port port, uint8_t mask) {
 
     uint8_t data  = readPortData(port); // Ensure the port is read before pulsing
     writePortData(port, mask, ~data);
+    writePortData(port, mask, data);
  
 }
 

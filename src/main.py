@@ -1,16 +1,15 @@
 from __future__ import annotations
 import sys
-import time
 from typing import Optional, List
 
 
 #Helper
-from prog_utils import arg_parse
-from prog_utils import resolve_port
-from prog_utils import open_serial
-from prog_utils import RX_reply
-from prog_utils import TX_RX
-from prog_utils import send_file_cmd
+from cli import arg_parse
+from serialPort import resolve_port
+from serialPort import open_serial
+from serialCom import RX_reply
+from serialCom import TX_RX
+from serialCom import send_file_cmd
 
 
 file = None
