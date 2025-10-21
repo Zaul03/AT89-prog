@@ -5,13 +5,10 @@ from typing import Optional
 
 
 
-def get_ports():
-  ports = list(serial.tools.list_ports.comports())
-  return ports
 
 def pick_port_interactive():
   while True:
-    ports = get_ports()
+    ports = list(serial.tools.list_ports.comports()) # get a list of available ports
     
     if not ports:
       print('\nNo available serial ports')
@@ -44,7 +41,6 @@ def resolve_port(cli_port: Optional[str])-> Optional[str]:
 
 def open_serial(port, baud, time_out):
   try:
-    print(port)
     ser = serial.Serial(port, baudrate=baud, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
   except serial.SerialException:
     print('Failed to open port. Closing program....')

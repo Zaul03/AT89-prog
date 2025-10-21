@@ -114,6 +114,8 @@ void loop() {
                 Serial.write(ACK); 
             else
                 Serial.println("Error: Chip erase failed."); 
+                
+            state = IDLE;
             break;
         case PROGRAM:
             for(uint8_t i = DATA_START_INDEX; i < LENGTH_RX - 1; i++) {
