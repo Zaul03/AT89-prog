@@ -113,7 +113,7 @@ void Prog::writePortData(Port port, uint8_t mask, uint8_t data) {
     else if(port == PORT_ID_C) {
         PORTC = (PORTC & ~mask) | (data & mask);}
     else {
-        Serial.println("Invalid port specified for writePortData.");}
+        Serial.println("Invalid port specified for writePortData().");}
 
     __asm__ __volatile__("nop"); //wait 1 clock cycle
 }
@@ -147,11 +147,11 @@ void Prog::pulsePin(Port port, uint8_t mask) {
 void Prog::setRST(RstState state) {
 
 if(state == RST_HIGH)
-    writePortData(PORT_ID_D, D2_MASK | D3_MASK, 0x00); 
+    writePortData(PORT_ID_D, D2_MASK | D3_MASK, 0x01); 
 else if(state == RST_LOW)
     writePortData(PORT_ID_D, D2_MASK | D3_MASK, 0x00); 
 else if(state == RST_12V)
-    writePortData(PORT_ID_D, D2_MASK | D3_MASK, 0x00);
+    writePortData(PORT_ID_D, D2_MASK | D3_MASK, 0x02);
     
 }
 

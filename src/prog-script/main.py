@@ -1,15 +1,17 @@
 from __future__ import annotations
 import sys
 from typing import Optional, List
+import time
 
 
 #Helper
 from cli import arg_parse
 from serialPort import resolve_port
 from serialPort import open_serial
-from serialCom import RX_reply
-from serialCom import TX_RX
-from serialCom import send_file_cmd
+from serialCom import TX, RX
+from serialCom import build_packet
+from serialCom import _ack_resp
+from intelhex import hex2bin
 
 
 file = None
@@ -20,40 +22,39 @@ def main(argv: Optional[List[str]] = None):
   port = resolve_port(args.port)
   print(f"Selected port {port}")
 
-  ser = open_serial(port, args.baud, args.timeout)
-  cmd = args.cmd
-  file = args.hexfile
-
+  ser = open_serial(port, args.baud, time_out=args.timeout)
   
-  try:
-    while True:
-      r = RX_reply(ser, True)
-      print(r)
-      if r == "AT89C2051 programmer initialized successfully.":
-        match cmd:
-           case 'program':
-              send_file_cmd(ser, cmd, file, True, True, 0xFF, 0.4)
-              break
-           case 'verify':
-              send_file_cmd(ser, cmd, file, False, True, 0xFF, 0.4)
-              break
-           case 'erase':
-              if TX_RX(ser, cmd, None) == 0x06:
-                 print("Chip erased")
-                 break
-  except KeyboardInterrupt:
-    print("\nInterrupted by user.")
-  finally:
-      try:
-          ser.close()
-      except Exception:
-          pass
-      print("Serial port closed.")
+
+  #hex2bin(file, file.replace('.hex', '.bin'))
+  packet = build_packet(args.cmd , b'1')
+
+  #send cmd
+  TX(ser, packet)
+  time.sleep(0.1)
+
+  #wait for ack
+  while True:
+    resp = RX(ser)
+    resp = str(resp).strip()
+    print (f"Response: {resp}")
+    if _ack_resp(resp) is True:
+      print("ACK received")
+      break
+    else:
+      print("No ACK received")
+      TX(ser, packet)
+      time.sleep(0.5)
+      
+  ser.close()
+  
+
+    
     
     
 if __name__== "__main__":
   sys.exit(main())   
     
+
 
 
 

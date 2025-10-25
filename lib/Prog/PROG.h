@@ -25,8 +25,8 @@ A5 - XTAL1
 
 // PORT D masks -----------------
 #define RDY_BSYn 0x02 // D1 for RDY/nBSY (active low)
-#define D2_MASK 0x04 
-#define D3_MASK 0x08 
+#define D2_MASK 0x04 // D2 for RST/VPP
+#define D3_MASK 0x08 // D3 for RST/VPP
 #define P1_0 0x10 // D4 for P1.0 (active high)
 #define P1_1 0x20 // D5 for P1.1 (active high)
 #define P1_2 0x40 // D6 for P1.2 (active high)
