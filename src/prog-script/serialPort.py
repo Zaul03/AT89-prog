@@ -41,7 +41,7 @@ def resolve_port(cli_port: Optional[str])-> Optional[str]:
 
 def open_serial(port, baud, time_out):
   try:
-    ser = serial.Serial(port, baudrate=baud, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
+    ser = serial.Serial(port, baudrate=baud, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=time_out)
   except serial.SerialException:
     print('Failed to open port. Closing program....')
     sys.exit(2)

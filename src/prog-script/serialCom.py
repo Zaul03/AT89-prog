@@ -60,18 +60,13 @@ def RX(ser: Serial) -> Optional[str | bytes]:
     return line
 
 def _ack_resp(resp) -> bool:
-    
-    if isinstance(resp, (bytes, bytearray)):
-        try:
-            s = bytes(resp).decode("ascii", errors="ignore")
-        except Exception:
-            return False
-    else:
-        s = str(resp) if resp is not None else ""
 
-    s = s.strip()
-    # Some devices use ASCII ACK (0x06); accept that too:
+    if resp is isinstance(str):
+        resp.strip('\r\n')
+
     if isinstance(resp, (bytes, bytearray)) and resp == b"\x06":
         return True
-    return s
+    elif isinstance(resp, (bytes, bytearray)) and resp == b"\x15":
+        return False
+    return resp
 
