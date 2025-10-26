@@ -17,6 +17,7 @@ from intelhex import hex2bin
 file = None
 
 def main(argv: Optional[List[str]] = None):
+
   args = arg_parse().parse_args(argv)
 
   port = resolve_port(args.port)
@@ -26,24 +27,28 @@ def main(argv: Optional[List[str]] = None):
   
 
   #hex2bin(file, file.replace('.hex', '.bin'))
-  packet = build_packet(args.cmd , b'1')
+  packet = build_packet(args.cmd , b'')
+  print(f"Built packet: {packet}")
 
   #send cmd
   TX(ser, packet)
-  time.sleep(0.1)
+
+  resp = None
 
   #wait for ack
   while True:
     resp = RX(ser)
-    resp = str(resp).strip()
+
+    resp = str(resp, 'ascii').strip('\r\n')
     print (f"Response: {resp}")
-    if _ack_resp(resp) is True:
-      print("ACK received")
+    if resp == '6':
+      print("Received ACK")
       break
     else:
-      print("No ACK received")
+      print("Received NACK, retrying...")
       TX(ser, packet)
-      time.sleep(0.5)
+    
+
       
   ser.close()
   

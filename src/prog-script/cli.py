@@ -1,7 +1,7 @@
 import argparse
 
 # Defaults
-DEFAULT_BAUD = 9600
+DEFAULT_BAUD = 115200
 DEFAULT_TIMEOUT = 0.5
 
 def arg_parse() -> argparse.ArgumentParser:

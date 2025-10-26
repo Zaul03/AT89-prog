@@ -32,7 +32,7 @@ bool Prog::progChip(uint8_t data, bool verify) {
 
     pulsePin(PORT_ID_C, PROGn); 
     
-    while(!(RDY_BSYn & readPortData(PORT_ID_D, RDY_BSYn))); //poll RDY/nBSY pin
+    while(!readPortData(PORT_ID_D, RDY_BSYn)); //poll RDY/nBSY pin
 
     /*
     if(verify) {
@@ -42,8 +42,7 @@ bool Prog::progChip(uint8_t data, bool verify) {
     */
     
     //ensure 1us delay
-    __asm__ __volatile__("nop");
-    __asm__ __volatile__("nop");
+    delayMicroseconds(1);
 
     pulsePin(PORT_ID_C, XTAL); // Next byte in ROM
     
@@ -59,13 +58,22 @@ bool Prog::verifyChip(uint8_t data) {
     readData = ((readData & 0xF0)>>4)  | (readPortData(PORT_ID_B, PORTB_DIR_MASK) << 4); // Combine with P1.4-P1.7
     
     pulsePin(PORT_ID_C, XTAL);
-
-    Serial.println(data,HEX);
     
     if (readData != data) 
         return false; 
     else
         return true; 
+}
+
+uint8_t Prog::readChip() {
+    setVerifyMode();
+    
+    uint8_t readData =  readPortData(PORT_ID_D, 0xF0); // Read data from P1.0-P1.7
+    readData = ((readData & 0xF0)>>4)  | (readPortData(PORT_ID_B, PORTB_DIR_MASK) << 4); // Combine with P1.4-P1.7
+    
+    pulsePin(PORT_ID_C, XTAL);
+
+    return readData;
 }
 
 void Prog::rst() {

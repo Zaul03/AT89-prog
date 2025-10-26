@@ -84,6 +84,8 @@ struct Prog{
     
     bool verifyChip(uint8_t data); 
 
+    uint8_t readChip();
+
     void rst(); 
 
 

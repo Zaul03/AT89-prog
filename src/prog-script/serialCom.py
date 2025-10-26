@@ -1,9 +1,4 @@
 from serial import Serial
-import time
-import os
-
-from intelhex import hex2bin
-
 from typing import Optional
 
 # Defaults
