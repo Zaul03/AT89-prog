@@ -10,11 +10,9 @@ from serialPort import resolve_port
 from serialPort import open_serial
 from serialCom import TX, RX
 from serialCom import build_packet
-from serialCom import _ack_resp
-from intelhex import hex2bin
-
 
 file = None
+resp = None
 
 def main(argv: Optional[List[str]] = None):
 
@@ -24,38 +22,30 @@ def main(argv: Optional[List[str]] = None):
   print(f"Selected port {port}")
 
   ser = open_serial(port, args.baud, time_out=args.timeout)
-  
 
-  #hex2bin(file, file.replace('.hex', '.bin'))
-  packet = build_packet(args.cmd , b'')
-  print(f"Built packet: {packet}")
-
-  #send cmd
-  TX(ser, packet)
-
-  resp = None
-
-  #wait for ack
+  #allow arduino to reset
   while True:
-    resp = RX(ser)
-
-    resp = str(resp, 'ascii').strip('\r\n')
-    print (f"Response: {resp}")
-    if resp == '6':
-      print("Received ACK")
+    resp = str(RX(ser), 'ascii').strip("\r\n")
+    print(resp)
+    if resp == "Ready!":
       break
-    else:
-      print("Received NACK, retrying...")
-      TX(ser, packet)
-    
 
-      
+  data = "Hello World!"
+  packet = build_packet(args.cmd, b'Hello World')
+  print(f'Packet to be sent: {packet.hex()}')
+
+  TX(ser, packet)
+  time.sleep(0.05)
+  while True:
+      resp = str(RX(ser), 'ascii').strip("\r\n")
+      print(resp)
+      if resp == "Chip erased":
+        break
+    
+    
   ser.close()
   
-
-    
-    
-    
+  
 if __name__== "__main__":
   sys.exit(main())   
     

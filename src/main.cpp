@@ -7,7 +7,7 @@
 #define SERIAL_BUFFER_SIZE 64
 #define CMD serialBuffer[0]
 #define LENGTH_RX serialBuffer[1]
-#define CHECKSUM_RX serialBuffer[LENGTH_RX - 1]
+#define CHECKSUM_RX serialBuffer[SERIAL_BUFFER_SIZE - 1]
 #define DATA_START_INDEX 2
 
 #define ROM_SIZE 2048 // 2KB for AT89C2051
@@ -29,6 +29,8 @@ void setup() {
     
     if (!prog.init())
         return;
+
+    Serial.println("Ready!");
 }
 
 void loop() {
@@ -46,21 +48,24 @@ void loop() {
             break;
         case RECEIVING_DATA:
 
-            while (bufferIndex < SERIAL_BUFFER_SIZE && Serial.available() > 0) {
+            while (bufferIndex < SERIAL_BUFFER_SIZE) {
+                if(Serial.available()){
                 serialBuffer[bufferIndex] = Serial.read();
                 if(bufferIndex < SERIAL_BUFFER_SIZE - 1)
                     checksum += serialBuffer[bufferIndex];
                 bufferIndex++;
+                } 
             }
     
             // Validate checksum
             if(checksum != CHECKSUM_RX) {
                 Serial.println("Error: Checksum mismatch.");
-                Serial.println("Received: " + String(CHECKSUM_RX, DEC) + ", Calculated: " + String(checksum, DEC));
+                Serial.println("Received: " + String(CHECKSUM_RX, HEX) + ", Calculated: " + String(checksum, HEX));
 
                 for(int i=0; i<SERIAL_BUFFER_SIZE; i++) 
-                    Serial.print("Received packet" + String(serialBuffer[i], HEX));
+                    Serial.print(String(serialBuffer[i], HEX));
                 
+                Serial.println();
                 state = IDLE;
                 return;
             }
@@ -90,7 +95,7 @@ void loop() {
         case ERASE:
             
             if (prog.eraseChip())
-                Serial.println(ACK);
+                Serial.println("Chip erased");
             else
                 Serial.println("Error: Chip erase failed."); 
                 
