@@ -37,6 +37,7 @@ def main(argv: Optional[List[str]] = None):
 
     TX(ser, packet)
     time.sleep(0.05)
+    ack_cnt = 2
     while True:
         resp = str(RX(ser), 'ascii').strip("\r\n")
         match resp:
@@ -45,10 +46,15 @@ def main(argv: Optional[List[str]] = None):
             break
           case "6":
             print(f"Packet received, returned code: {resp}")
+            ack_cnt = ack_cnt - 1
+            if ack_cnt == 0:
+              break
           case "Error: Checksum mismatch.":
             time.sleep(0.2) #timeout
             TX(ser,packet)
             time.sleep(0.05)
+          case _:
+            print(resp)
 
     ser.close()
   

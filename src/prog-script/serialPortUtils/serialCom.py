@@ -9,7 +9,7 @@ CMD_MAP = {
     "erase" :   ord('e'),    "e":   ord('e'),
     "program":  ord('p'),    "p":   ord('p'),
     "verify":   ord('v'),    "v":   ord('v'),
-    "data":     ord('d'),    "d":   ord('d')
+    "read":     ord('m'),    "m":   ord('m')
 }
 
 

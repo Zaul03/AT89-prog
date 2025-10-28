@@ -2,12 +2,12 @@ import argparse
 
 # Defaults
 DEFAULT_BAUD = 115200
-DEFAULT_TIMEOUT = 0.5
+DEFAULT_TIMEOUT = 0.8
 
 def arg_parse() -> argparse.ArgumentParser:
   p = argparse.ArgumentParser(
     prog = "main",
-    description="AT89C2051/4051 serial programmer (Arduino bridge).")
+    description="AT89C2051 serial programmer (Arduino bridge).")
 
   p.add_argument("-p", "--port", help = 'Serial port( e.g. COM5 or /dev/ttyACM0)')
   p.add_argument("-b", "--baud", type=int, default=DEFAULT_BAUD, help=f"Baud rate (default: {DEFAULT_BAUD})")
@@ -17,6 +17,7 @@ def arg_parse() -> argparse.ArgumentParser:
 
   #erase
   sub.add_parser("erase", help="Chip erase")
+  sub.add_parser("read", help = "Reads the ROM adn displays it in hex format")
 
   # program
   sp_prog = sub.add_parser("program", help="Program from Intel HEX (auto-erase + verify unless disabled)")

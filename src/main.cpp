@@ -2,26 +2,51 @@
 #include <Prog.h>
 
 #define BAUD_RATE 115200
-
 #define ACK 0x06
+
+
 #define SERIAL_BUFFER_SIZE 64
+uint8_t serialBuffer[SERIAL_BUFFER_SIZE]; // [cmd, length, data..., checksum]
+uint8_t checksum = 0;
+
 #define CMD serialBuffer[0]
 #define LENGTH_RX serialBuffer[1]
-#define CHECKSUM_RX serialBuffer[SERIAL_BUFFER_SIZE - 1]
 #define DATA_START_INDEX 2
+#define CHECKSUM_RX serialBuffer[SERIAL_BUFFER_SIZE - 1]
 
 #define ROM_SIZE 2048 // 2KB for AT89C2051
-
-uint8_t serialBuffer[SERIAL_BUFFER_SIZE]; // [cmd, length, data..., checksum]
-uint8_t bufferIndex = 0;
-uint8_t checksum = 0;
 
 
 enum State {IDLE, RECEIVING_DATA, ERASE, PROGRAM, VERIFY, MEM_DUMP};
 State state = IDLE;
 Prog prog;
 
-unsigned long receiveStartTime = 0;
+//fills the buffer and returns the checksum
+uint8_t readIncomingPacket(uint8_t serialBuffer[], uint8_t len){
+    uint8_t i = 0;
+    uint8_t cs = 0;
+
+    while (i < len) {
+        if(Serial.available()){
+            serialBuffer[i] = Serial.read();
+            if(i < SERIAL_BUFFER_SIZE - 1)
+                cs += serialBuffer[i]; 
+            i++; 
+        } 
+    }
+    return cs;
+}
+
+//sends back the received package usefull for debug
+
+void returnPacket(uint8_t serialBuffer[], uint8_t len){
+    Serial.print("Received package: ");
+            for(int i=0; i<SERIAL_BUFFER_SIZE; i++) 
+                    Serial.print(String(serialBuffer[i],HEX));
+            Serial.println();
+}
+
+
 
 
 void setup() {
@@ -39,56 +64,30 @@ void loop() {
         case IDLE:
             
             while(Serial.available()<1);
-                
             state = RECEIVING_DATA;
-            receiveStartTime = millis();
-            checksum = 0;
-            bufferIndex = 0; 
-
             break;
-        case RECEIVING_DATA:
 
-            while (bufferIndex < SERIAL_BUFFER_SIZE) {
-                if(Serial.available()){
-                serialBuffer[bufferIndex] = Serial.read();
-                if(bufferIndex < SERIAL_BUFFER_SIZE - 1)
-                    checksum += serialBuffer[bufferIndex];
-                bufferIndex++;
-                } 
-            }
+        case RECEIVING_DATA:  
+            checksum = readIncomingPacket(serialBuffer, SERIAL_BUFFER_SIZE);
+            //returnPacket(serialBuffer, SERIAL_BUFFER_SIZE);        
     
             // Validate checksum
             if(checksum != CHECKSUM_RX) {
                 Serial.println("Error: Checksum mismatch.");
                 Serial.println("Received: " + String(CHECKSUM_RX, HEX) + ", Calculated: " + String(checksum, HEX));
-
-                for(int i=0; i<SERIAL_BUFFER_SIZE; i++) 
-                    Serial.print(String(serialBuffer[i], HEX));
-                
-                Serial.println();
                 state = IDLE;
-                return;
-            }
+                return;}
 
             // Acknowledge receipt and validation
             Serial.println(ACK); 
             
             // Process command
             switch (CMD){
-                case 'p':
-                        state = PROGRAM;
-                    break;
-                case 'e':
-                        state = ERASE;
-                    break;
-                case 'v':
-                        state = VERIFY;
-                    break;
-                case 'm':
-                        state = MEM_DUMP; 
-                default:
-                        state = IDLE;
-                    break;
+                case 'p':   state = PROGRAM;    break;
+                case 'e':   state = ERASE;      break;
+                case 'v':   state = VERIFY;     break;
+                case 'm':   state = MEM_DUMP;   break;
+                default:    state = IDLE;       break;
             }
             
             break;
@@ -102,15 +101,23 @@ void loop() {
             state = IDLE;
             break;
         case PROGRAM:
+
             
-            for(uint8_t i = DATA_START_INDEX; i < LENGTH_RX + DATA_START_INDEX; i++) {
+            for(int i = DATA_START_INDEX; i < (LENGTH_RX + DATA_START_INDEX); i++) {
                 if (!prog.progChip(serialBuffer[i], false)) {
                     Serial.println("Error: Programming failed at byte index " + String(i-2));
                     state = IDLE;
                     return;
                 }
-                else 
-                    Serial.println(ACK);}
+                /*
+                else {
+                    Serial.print(String(serialBuffer[i], HEX)); // for debug
+                } 
+                */     
+            }
+            //Serial.println();
+                 
+            Serial.println(ACK);
 
             state = IDLE;
             break;
@@ -120,22 +127,30 @@ void loop() {
                 if (!prog.verifyChip(serialBuffer[i])) {
                     Serial.println("Error: Verify failed at byte index " + String(i-2));
                     state = IDLE;
-                    return;}
-                else 
-                    Serial.println(ACK); }
+                    return;} 
+                }
+
+            Serial.println(ACK);        
             state = IDLE;
             break;
 
         case MEM_DUMP:
-                for(uint16_t i = 0; i < ROM_SIZE; i++) {
-                    uint8_t data = prog.readChip();
-                    Serial.println(String(i,HEX) + ": " + data); 
+            Serial.println("Memory: ");
+            for(uint16_t i = 0; i < ROM_SIZE; i++) {
+                if( i % 16 == 0){
+                    Serial.println();
+                    Serial.print(String(i,HEX) + ": ");
                 }
-            
+
+                Serial.print(String(prog.readChip(), HEX) + ' ');
+            }
+
+            Serial.println();
+
+            Serial.println(ACK);
             state = IDLE;
             break;
         default:
-            
             state = IDLE;
             break;
     }
