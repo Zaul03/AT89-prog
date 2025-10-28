@@ -18,32 +18,39 @@ def main(argv: Optional[List[str]] = None):
 
   args = arg_parse().parse_args(argv)
 
-  port = resolve_port(args.port)
-  print(f"Selected port {port}")
-
-  ser = open_serial(port, args.baud, time_out=args.timeout)
-
-  #allow arduino to reset
   while True:
-    resp = str(RX(ser), 'ascii').strip("\r\n")
-    print(resp)
-    if resp == "Ready!":
-      break
+    port = resolve_port(args.port)
+    print(f"Selected port {port}")
 
-  data = "Hello World!"
-  packet = build_packet(args.cmd, b'Hello World')
-  print(f'Packet to be sent: {packet.hex()}')
+    ser = open_serial(port, args.baud, time_out=args.timeout)
 
-  TX(ser, packet)
-  time.sleep(0.05)
-  while True:
+    #allow arduino to reset
+    while True:
       resp = str(RX(ser), 'ascii').strip("\r\n")
       print(resp)
-      if resp == "Chip erased":
+      if resp == "Ready!":
         break
-    
-    
-  ser.close()
+
+    data = "Hello World!"
+    packet = build_packet(args.cmd, b'Hello World')
+    print(f'Packet to be sent: {packet.hex()}')
+
+    TX(ser, packet)
+    time.sleep(0.05)
+    while True:
+        resp = str(RX(ser), 'ascii').strip("\r\n")
+        match resp:
+          case "Chip erased":
+            print(resp)
+            break
+          case "6":
+            print(f"Packet received, returned code: {resp}")
+          case "Error: Checksum mismatch.":
+            time.sleep(0.2) #timeout
+            TX(ser,packet)
+            time.sleep(0.05)
+
+    ser.close()
   
   
 if __name__== "__main__":
