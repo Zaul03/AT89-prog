@@ -6,10 +6,10 @@ import time
 
 #Helper
 from cli import arg_parse
-from serialPort import resolve_port
-from serialPort import open_serial
-from serialCom import TX, RX
-from serialCom import build_packet
+from serialPortUtils import resolve_port
+from serialPortUtils import open_serial
+from serialPortUtils import TX, RX
+from serialPortUtils import build_packet
 
 file = None
 resp = None
